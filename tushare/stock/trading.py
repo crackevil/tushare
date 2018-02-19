@@ -20,12 +20,13 @@ from pandas.compat import StringIO
 from tushare.util import dateu as du
 from tushare.util.formula import MA
 import os
+import logging
 try:
     from urllib.request import urlopen, Request
 except ImportError:
     from urllib2 import urlopen, Request
 
-
+logger = logging.getLogger('tushare.stock.trading')
 def get_hist_data(code=None, start=None, end=None,
                   ktype='D', retry_count=3,
                   pause=0.001):
@@ -65,6 +66,7 @@ def get_hist_data(code=None, start=None, end=None,
         time.sleep(pause)
         try:
             request = Request(url)
+            logger.info(request.get_full_url())
             lines = urlopen(request, timeout = 10).read()
             if len(lines) < 15: #no data
                 return None
@@ -110,6 +112,7 @@ def _parsing_dayprice_json(types=None, page=1):
     ct._write_console()
     request = Request(ct.SINA_DAY_PRICE_URL%(ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                  ct.PAGES['jv'], types, page))
+    logger.info(request.get_full_url())
     text = urlopen(request, timeout=10).read()
     if text == 'null':
         return None
@@ -171,6 +174,7 @@ def get_tick_data(code=None, date=None, retry_count=3, pause=0.001,
                 df.columns = ct.TICK_COLUMNS
             else:
                 re = Request(url[src])
+                logger.info(re.get_full_url())
                 lines = urlopen(re, timeout=10).read()
                 lines = lines.decode('GBK') 
                 if len(lines) < 20:
@@ -211,6 +215,7 @@ def get_sina_dd(code=None, date=None, vol=400, retry_count=3, pause=0.001):
         try:
             re = Request(ct.SINA_DD % (ct.P_TYPE['http'], ct.DOMAINS['vsf'], ct.PAGES['sinadd'],
                                 symbol, vol, date))
+            logger.info(re.get_full_url())
             lines = urlopen(re, timeout=10).read()
             lines = lines.decode('GBK') 
             if len(lines) < 100:
@@ -252,6 +257,7 @@ def get_today_ticks(code=None, retry_count=3, pause=0.001):
             request = Request(ct.TODAY_TICKS_PAGE_URL % (ct.P_TYPE['http'], ct.DOMAINS['vsf'],
                                                        ct.PAGES['jv'], date,
                                                        symbol))
+            logger.info(request.get_full_url())
             data_str = urlopen(request, timeout=10).read()
             data_str = data_str.decode('GBK')
             data_str = data_str[1:-1]
@@ -365,6 +371,7 @@ def get_realtime_quotes(symbols=None):
     symbols_list = symbols_list[:-1] if len(symbols_list) > 8 else symbols_list 
     request = Request(ct.LIVE_DATA_URL%(ct.P_TYPE['http'], ct.DOMAINS['sinahq'],
                                                 _random(), symbols_list))
+    logger.info(request.get_full_url())
     text = urlopen(request,timeout=10).read()
     text = text.decode('GBK')
     reg = re.compile(r'\="(.*?)\";')
@@ -507,6 +514,7 @@ def _parase_fq_factor(code, start, end):
     symbol = ct._code_to_symbol(code)
     request = Request(ct.HIST_FQ_FACTOR_URL%(ct.P_TYPE['http'],
                                              ct.DOMAINS['vsf'], symbol))
+    logger.info(request.get_full_url())
     text = urlopen(request, timeout=10).read()
     text = text[1:len(text)-1]
     text = text.decode('utf-8') if ct.PY3 else text
@@ -534,10 +542,12 @@ def _fun_except(x):
 
 
 def _parse_fq_data(url, index, retry_count, pause):
+    logger = logging.getLogger('tushare.stock.trading')
     for _ in range(retry_count):
         time.sleep(pause)
         try:
             request = Request(url)
+            logger.info(request.get_full_url())
             text = urlopen(request, timeout=10).read()
             text = text.decode('GBK')
             html = lxml.html.parse(StringIO(text))
@@ -588,6 +598,7 @@ def get_index():
     """
     request = Request(ct.INDEX_HQ_URL%(ct.P_TYPE['http'],
                                              ct.DOMAINS['sinahq']))
+    logger.info(request.get_full_url())
     text = urlopen(request, timeout=10).read()
     text = text.decode('GBK')
     text = text.replace('var hq_str_sh', '').replace('var hq_str_sz', '')
@@ -712,6 +723,7 @@ def _get_k_data(url, dataflag='',
             time.sleep(pause)
             try:
                 request = Request(url)
+                logger.info(request.get_full_url())
                 lines = urlopen(request, timeout = 10).read()
                 if len(lines) < 100: #no data
                     return None
